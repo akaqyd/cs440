@@ -1,0 +1,70 @@
+**Final Project Proposal**
+
+Student name: Qiyuan Dong
+
+Sciper number: 307612
+
+
+Scene description and motivation
+================================
+
+<div>
+    <img src="demo.jpg">
+</div>
+
+-  Rendering Plan
+    - The scene above is rendered using Blender and shows a city floating in the air. The city is built on a Mobius Ring, where people live in the city are stuck in the loop and can never walk out of the city. Many meshes and data of this scene are from eMirase's Aerial Cityscape. Later I will add more details to the city on the ring.
+    - The scene currently has a single light source and does not use any textures, which makes the rendering relatively easier. I will probably add a IBL light source and apply bump mapping to the water surface to add some realism.
+    - I suppose the main challenge will be the implementation of heterogeneous volumetric media to render the clouds.
+
+
+
+Feature list
+============
+
+Using the table below, list the features you'll use to achieve your render, and how they are used.
+
+  * Include the point counts, they should add up to *80 points*.
+  * If your list of features adds up to more than 80 points, you must reduce the point count for the features of your choice until the total reaches 80 points exactly.
+
+
+<table>
+    <tr>
+        <th>Feature</th>
+        <th>Standard point count</th>
+        <th>Adjusted point count</th>
+    </tr>
+    <tr>
+        <td>Image Based Lighting (hacker points awarded)</td>
+        <td>15</td>
+        <td>15</td>
+    </tr>
+    <tr>
+        <td>Heterogeneous Volumetric Participating Media</td>
+        <td>60</td>
+        <td>60</td>
+    </tr>
+    <tr>
+        <td>Bump mapping / normal mapping</td>
+        <td>10</td>
+        <td>5</td>
+    </tr>
+    <tr>
+        <td><strong>Total</strong></td>
+        <td>85</td>
+        <td>80</td>
+    </tr>
+</table>
+
+
+
+<!-- Slider -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="../resources/jquery.event.move.js"></script>
+<script src="../resources/jquery.twentytwenty.js"></script>
+<link href="../resources/offcanvas.css" rel="stylesheet">
+<link href="../resources/twentytwenty.css" rel="stylesheet" type="text/css" />
+<script>var markdeepOptions = {onLoad: function() {$(".twentytwenty-container").twentytwenty({default_offset_pct: 0.5, move_slider_on_hover: true});} };</script>
+<!-- Markdeep: -->
+<script src="https://morgan3d.github.io/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
+<script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

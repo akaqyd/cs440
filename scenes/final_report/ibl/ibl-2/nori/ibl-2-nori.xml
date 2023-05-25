@@ -1,0 +1,30 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="path_vol_mis"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="128"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="76.56614055808697"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="100.0"/>
+		<integer name="width" value="960"/>
+		<integer name="height" value="540"/>
+		<transform name="toWorld">
+			<matrix value="4.371138828673793e-08,-4.371138828673793e-08,1.0,0.0,0.0,1.0,4.371138828673793e-08,0.0,-1.0,-1.910685676922942e-15,4.371138828673793e-08,0.0,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</camera>
+	<mesh type="obj">
+		<string name="filename" value="meshes/leftSphere.obj"/>
+		<bsdf type="dielectric">
+		</bsdf>
+	</mesh>
+
+	<emitter type="IBL">
+		<string name="exr_path" value="../ibl.exr"/>
+		<float name="strength" value="1.0"/>
+		<transform name="toWorld">
+			<matrix value="1.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,-1.0,0.0,0.0,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</emitter>
+</scene>

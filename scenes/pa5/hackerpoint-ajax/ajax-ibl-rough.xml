@@ -1,0 +1,32 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="whitted"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="1024"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="39.59775192067671"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="100.0"/>
+		<integer name="width" value="768"/>
+		<integer name="height" value="768"/>
+		<transform name="toWorld">
+			<matrix value="-0.8544861674308777,-0.0903366208076477,-0.5115591287612915,7.358891487121582,-0.004587426315993071,0.9860371351242065,-0.16646242141723633,7.599664211273193,0.5194539427757263,-0.13989309966564178,-0.8429694771766663,6.925790786743164,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</camera>
+
+	<mesh type="obj">
+		<string name="filename" value="IndexedFaceSete.obj"/>
+		<bsdf type="microfacet-hacker">
+			<float name="alpha" value="0.3"/>
+		</bsdf>
+	</mesh>
+
+
+	<emitter type="IBL">
+		<string name="exr_path" value="wild-ibl.exr" />
+		<float name="strength" value="1" />
+	</emitter>
+
+
+</scene>

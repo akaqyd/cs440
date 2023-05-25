@@ -1,0 +1,103 @@
+<?xml version="1.0" ?>
+<scene version="0.5.0">
+	<integrator type="volpath"/>
+
+	<sensor type="perspective">
+		<sampler type="independent">
+			<integer name="sampleCount" value="64"/>
+		</sampler>
+
+		<float name="fov" value="39.59775192067671"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="100.0"/>
+		<integer name="width" value="600"/>
+		<integer name="height" value="400"/>
+		<transform name="toWorld">
+			<matrix value="-1.0,0.0,0.0,0.0,0.0,1.0,4.371138828673793e-08,0.7599999904632568,0.0,4.371138828673793e-08,-1.0,4.056399822235107,0.0,0.0,0.0,1.0"/>
+		</transform>
+
+		<film type="hdrfilm">
+			<integer name="height" value="400"/>
+			<integer name="width" value="600"/>
+			<rfilter type="gaussian"/>
+		</film>
+
+	</sensor>
+
+	<shape type="obj">
+		<string name="filename" value="meshes/light.obj"/>
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.75,0.75,0.75"/>
+		</bsdf>
+		<emitter type="area">
+			<rgb name="radiance" value="40 40 40"/>
+		</emitter>
+	</shape >
+
+	<shape type="obj">
+		<string name="filename" value="meshes/leftWall.obj"/>
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.630 0.065 0.05"/>
+		</bsdf>
+	</shape >
+
+	<shape type="obj">
+		<string name="filename" value="meshes/rightWall.obj"/>
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.161 0.133 0.427"/>
+		</bsdf>
+	</shape >
+
+	<medium type="homogeneous" id="m1">
+		<rgb name="sigmaA" value="1 1 1"/>
+		<rgb name="sigmaS" value="4 4 4"/>
+		<phase type="hg">
+			<float name="g" value="0.2"/>
+		</phase>
+	</medium>
+
+	<shape type="obj">
+		<string name="filename" value="meshes/leftSphere.obj"/>
+<!--		<bsdf type="diffuse">-->
+<!--			<rgb name="reflectance" value="0.75 0.75 0.75"/>-->
+<!--		</bsdf>-->
+		<ref name="interior" id="m1" />
+
+	</shape >
+
+	<medium type="homogeneous" id="m2">
+		<rgb name="sigmaA" value="4 4 4"/>
+		<rgb name="sigmaS" value="1 1 1"/>
+		<phase type="hg">
+			<float name="g" value="0.2"/>
+		</phase>
+	</medium>
+
+	<shape type="obj">
+		<string name="filename" value="meshes/rightSphere.obj"/>
+<!--		<bsdf type="diffuse">-->
+<!--			<rgb name="reflectance" value="0.75 0.75 0.75"/>-->
+<!--		</bsdf>-->
+		<ref name="interior" id="m2" />
+	</shape >
+
+	<shape type="obj">
+		<string name="filename" value="meshes/ceiling.obj"/>
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</shape >
+	<shape type="obj">
+		<string name="filename" value="meshes/floor.obj"/>
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</shape >
+	<shape type="obj">
+		<string name="filename" value="meshes/backWall.obj"/>
+		<bsdf type="diffuse">
+			<rgb name="reflectance" value="0.725 0.71 0.68"/>
+		</bsdf>
+	</shape>
+
+</scene>

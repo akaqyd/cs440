@@ -1,0 +1,156 @@
+**Homework 3**
+
+Student name: Qiyuan Dong
+
+Sciper number: 307612
+
+Monte Carlo Sampling (60 pts)
+=============================
+
+For each of these sections, don't forget to include necessary derivations as well as screenshots of passing $\chi^2$ tests from the <tt>warptest</tt> executable.
+
+Tent
+----
+<img src="img/tent-1.png">
+<img src="img/tent-2.png">
+<img src="img/tent-3.png">
+
+Uniform disk
+------------
+<img src="img/disk-1.png">
+<img src="img/disk-2.png">
+<img src="img/disk-3.png">
+
+Uniform sphere
+--------------
+<img src="img/sphere-1.png">
+<img src="img/sphere-2.png">
+<img src="img/sphere-3.png">
+
+Uniform hemisphere
+------------------
+<img src="img/hemi-1.png">
+<img src="img/hemi-2.png">
+<img src="img/hemi-3.png">
+
+Cosine hemisphere
+-----------------
+<img src="img/cos-1.png">
+<img src="img/cos-2.png">
+<img src="img/cos-3.png">
+
+Beckmann distribution
+---------------------
+- alpha = 0.1
+<img src="img/beckmann-6.png">
+<img src="img/beckmann-7.png">
+
+- alpha = 0.5
+<img src="img/beckmann-1.png">
+<img src="img/beckmann-2.png">
+
+- alpha = 1.0
+<img src="img/beckmann-4.png">
+<img src="img/beckmann-5.png">
+
+- derivations
+<img src="img/beckmann-3.png">
+
+Two simple rendering algorithms (40 pts)
+========================================
+
+Point lights
+------------
+
+- Ajax bust illuminated by a point light source:
+    <div class="twentytwenty-container">
+        <img src="ajax-simple-ref.png" alt="Reference">
+        <img src="ajax-simple.png" alt="Mine">
+    </div>
+
+- Error between the reference image and my rendered image
+    - I compared the rendered image with the provided reference image
+    - The error is not noticeable by eye
+    - The mean of error is zero, minimum error is -0.029, maximum error is 0.031
+    - The statistics indicate that the subtle differences are probably due to the randomness of the rendering algorithm
+        <img src="img/error-simple.png">
+
+Ambient occlusion
+-----------------
+
+- Ajax bust rendered using ambient occlusion:
+    <div class="twentytwenty-container">
+        <img src="ajax-ao-ref.png" alt="Reference">
+        <img src="ajax-ao.png" alt="Mine">
+    </div>
+
+- Error between the reference image and my rendered image
+    - I compared the rendered ambient occlusion image with the provided reference image
+    - The error is more noticeable than the previous one, but still seems insignificant
+    - The mean of error is still 0, minimum error is -0.072, maximum error is 0.081
+    - The statistics indicate that the subtle differences are probably due to the randomness of the rendering algorithm
+        <img src="img/error-ao.png">
+
+Hacker Points: Hierarchical Sample Warping (20 points)
+======================================================
+
+Implementation of the hierarchical sample warping
+-------------------------------------------------
+
+- My implementation of the hierarchical sample warping is similar to the **octree** acceleration in the previous homework, but it is a **quadtree** this time
+    - At the beginning, the entire quadtree is built in a bottom-up way to represent the mipmap. The depth of the quadtree is equal to $M - 1$ for an image with $2^M \times 2^M$ pixels
+    - Each `MipMapNode` contains necessary parameters to warp a given sample point at the level and position that this node represents, such as `xmin, xmax, ymin, ymax, and the luminance of four corners`
+    - After warping a given sample point using the function `Point2f warpPoint(Point2f &p) `,
+        - If the node is an interior node, function `MipMapNode *nextNode(Point2f loc)` will return the pointer to a MipMapNode at the next level according to warped coordinates of the sample point
+        - If the node is an leaf node, the hierarchical warping for this sample point is done
+
+
+Simple image: $2 \times 2$
+-------------------------------------------------
+    - The simple $2 \times 2$ image contains the value
+        $$
+        \begin{bmatrix}
+        60 & 20\\
+        4 & 16
+        \end{bmatrix}
+        $$
+    - Warped points
+        <img src="img/2by2.png">
+    - $\chi^2$ test
+        <img src="img/2by2-test.png">
+
+Interesting image: $1024 \times 1024$
+-------------------------------------------------
+    - The image is downloaded from https://vgl.ict.usc.edu/Data/HighResProbes/. I cropped the original image to a square, and resized it into $1024 \times 1024$
+    - The original image is shown below
+        <img src="img/large-ori.png">
+    - The hierarchical warping result looks pretty reasonable to me. However, as discussed on the Piazza, the luminance distribution is very spiky and contains sharp boundaries, which results in the failure of the test.
+        <img src="img/large.png">
+        <img src="img/large-test.png">
+    - I applied the Gaussian blur on the original image to smooth the sharp boundaries. The blurred image passed the test this time.
+        <img src="img/large-blurred-ori.png">
+        <img src="img/large-blurred.png">
+        <img src="img/large-blurred-test.png">
+
+How to run my hierarchical sample warping
+-------------------------------------------
+    - The `warptest.cpp` has been modified to accept command line arguments
+    - To run the hierarchical sample warping on any `exr` image, you could execute
+        - `warptest -exr path/to/the/image`
+        - Without command line arguments, the hierarchical sample warping will use `scene/pa3/4by4.exr` as the default one
+        - Then select Hierarchical in the warping method menu
+            <img src="img/menu.png">
+    - Please note that the image should have the size $2^M \times 2^M$
+    - `exr` images used in this report are stored under `scene/pa3`
+
+
+<!-- Slider -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="../resources/jquery.event.move.js"></script>
+<script src="../resources/jquery.twentytwenty.js"></script>
+<link href="../resources/offcanvas.css" rel="stylesheet">
+<link href="../resources/twentytwenty.css" rel="stylesheet" type="text/css" />
+<script>var markdeepOptions = {onLoad: function() {$(".twentytwenty-container").twentytwenty({default_offset_pct: 0.5, move_slider_on_hover: true});} };</script>
+<!-- Markdeep: -->
+<script src="https://morgan3d.github.io/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
+<script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

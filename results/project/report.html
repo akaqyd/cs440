@@ -1,0 +1,658 @@
+**Final Project Report**
+
+Student name: Qiyuan Dong
+
+Sciper number: 307612
+
+
+Final render
+============
+
+<img src="img/final-image-QiyuanDong.png">
+
+
+Motivation
+==========
+
+My rendering theme is time loop. In the image, a robot just finished his time traveling from the future to the present with a secret mission. He jumped out of the portal (which is also a loop) and just landed on the earth.
+
+
+Feature list
+============
+
+<table>
+    <tr>
+        <th>Feature</th>
+        <th>Standard point count</th>
+        <th>Adjusted point count</th>
+    </tr>
+    <tr>
+        <td>Image Based Lighting (hacker points awarded)</td>
+        <td>15</td>
+        <td>15</td>
+    </tr>
+    <tr>
+        <td><del>Normal Mapping</del> -> Texture</td>
+        <td>10</td>
+        <td>5</td>
+    </tr>
+    <tr>
+        <td>Heterogeneous Volumetric Participating Media</td>
+        <td>60</td>
+        <td>60</td>
+    </tr>
+    <tr>
+        <td><strong>Total</strong></td>
+        <td>85</td>
+        <td>80</td>
+    </tr>
+</table>
+
+
+Build Instruction
+=============================
+Since OpenVDB is used to read volumetric data, the code cannot build on GitHub. To build Nori on your local machine, please do the following extra steps:
+
+- `git clone` OpenVDB to the root directory of Nori
+- Install dependencies following https://github.com/AcademySoftwareFoundation/openvdb
+- Build and install OpenVDB following https://github.com/AcademySoftwareFoundation/openvdb
+- Build Nori
+
+
+Image Based Lighting (15 pts)
+=============================
+- Image based lighting is to use a panoramic photo taken from the real world as a light source to simulate natural lighting conditions.
+- Image based lighting is implemented in my Nori as a child class of `Emitter`. My design and implementation of IBL make reference to PBRT's Infinite Light. Codes can be found under `src/ibl.cpp`
+- In short, I designed IBL as an infinitely large sphere and the whole scene is placed at the center of the sphere.
+- To create an IBL emitter, it is required to provide a path to the `EXR` file, a `WorldToLight` or `LightToWorld` transform, and a float number `strength` to scale the overall radiance. An example is as below
+    ~~~ xml
+    <emitter type="IBL">
+        <string name="exr_path" value="ibl/sunset-1.exr"> </string>
+        <float name="strength" value="0.8"> </float>
+        <transform name="toWorld">
+            <matrix value="1.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,-1.0,0.0,0.0,0.0,0.0,0.0,1.0"> </matrix>
+        </transform>
+    </emitter>
+    ~~~
+- Since the hierarchical sample warping has already been implemented in a previous hacker point, the main methods to be implemented for IBL are `sampleLi`, `pdfLi`, and `le`, whose usage and interface are defined in the previous implemented `Emitter` abstract class.
+- The design details of each of these methods are discussed as below.
+
+
+
+sampleLi()
+--------------------
+This method samples a point from the lighting image proportionally to the radiance of each pixel. The basic steps are as follows
+
+- Use the previously implemented `Warp::squareToHierarchical()` method to warp a 2D sample from `sampler->next2D()` into a point `uv` over the light image.
+    - `uv` coordinates are float numbers defined in $[0,1]^2$
+    - u is the horizontal coordinate and v is the vertical coordinate
+    ~~~ cpp
+    Point2f uv = Warp::squareToHierarchical(sampler->next2D());
+    ~~~
+
+- The emitted radiance from the `uv` point on the lighting image can be obtained by calling `lookup()` auxiliary function
+    - lookup() accepts the `uv` coordinates defined over the lighting image and converts them into a point over a grid of the size $cols \times rows$. Then it uses bilinear interpolation to compute the emitted radiance at this point.
+    - Note that in my implementation, discrete radiance values are defined at the center of each grid cell, i.e. (0.5, 0.5), (1.5, 0.5) ..., instead of (0, 0), (1, 0) ...
+    ~~~ cpp
+    Color3f bm_val = lookup(m_bm, uv);
+    ~~~
+
+- Given a point on the light image, we need to convert it into a point on the sphere extended by the lighting image in its local coordinate.
+    - Use an auxiliary function `uv2sphere()` to transform the `uv` coordinates over the lighting image into the local sphere coordinates.
+    - As previously mentioned, u is the horizontal coordinate and v is the vertical coordinate. Thus, $\phi$ is calculated as $2\pi u$, $\theta$ is calculated as $(1-v) \pi$
+    - Given $\phi$ and $\theta$, a point on the uniform sphere can be easily computed
+    ~~~ cpp
+    Vector3f loc_wi = uv2sphere(uv).normalized();
+    ~~~
+
+- Given a point on the uniform sphere extended by the lighting image in its local coordinate, transform it from the IBL coordinates into the world coordinates using the transformation matrix IBLToWorld. Then we have obtained the direction along which the radiance is emitted to the point in the scene
+    - Either IBLToWorld or WorldToIBL has to be provided in the scene.xml
+    - Given one of the transformation, the other one can be obtained by computing the inverse matrix
+    ~~~ cpp
+    wi = m_toWorld * loc_wi;
+    ~~~
+
+- Now we have obtained the emitted radiance and the emitted direction in the world coordinates, the rest is to test the occlusion and return the result which need to  take into account the foreshortening factor and sampling pdf.
+    ~~~ cpp
+    // test visibility
+    Ray3f shadowRay(ref, wi, Epsilon, Scene_Boundary);
+    if (scene->rayIntersect(shadowRay))
+        return 0.f;
+
+    float pdf      = pdfLi(ref, ref_n, loc_wi, nn);
+    Color3f val    = bm_val * cosTheta / pdf;
+
+    return isnan(val.x()) || isinf(val.x()) ? 0.f : val;
+    ~~~
+
+pdfLi()
+--------------------
+This method computes the probability density for a certain point(direction) to be sampled. The basic steps are as follow
+
+1. Convert the point into the uv coordinates defined over the lighting image.
+    ~~~ cpp
+    // p was returned by sampleLi() and was computed as wi * Scene_Boundary
+    Vector3f wi    = p.normalized(); 
+    Point2f uv     = sphere2uv(wi);
+    ~~~
+
+2. Compute the jacobian.
+    ~~~ cpp
+    float jacobian = 2 * M_PI * M_PI * Frame::sinTheta(wi);
+    ~~~
+
+3. Calculate the pdf using previously implemented `Warp::squareToHierarchicalPdf()` and return the result divided by the jacobian.
+    ~~~ cpp
+    float pdf = Warp::squareToHierarchicalPdf(uv) / jacobian;
+    if (pdf < Epsilon || isnan(pdf) || isnan(pdf))
+        return 0.f;
+    else
+        return pdf;
+    ~~~
+
+le()
+-------------
+For a given ray pointing to a point on the IBL sphere, this method computes the emitted radiance along the reverse direction. This method is useful when the ray has no intersection with the scene and eventually hits the IBL sphere.
+
+1. Convert the ray from the world coordinate into the IBL local coordinate.
+    ~~~ cpp
+    Vector3f wi =  ray.d.normalized();
+    wi = m_toLight * wi;
+    ~~~
+
+2. Convert the point in the local coordinate into the uv coordinates defined over the lighting image and use the previous mentioned `lookup()` function to compute the emitted radiance.
+    - m_strength is used to globally scale the radiance of the IBL
+    ~~~ cpp
+    Point2f uv  = sphere2uv(wi);
+    Color3f val = lookup(m_bm, uv);
+    return val * m_strength;
+    ~~~
+
+Integrator
+-------------
+In the estimation of direct illumination, IBL is treated in the similar way as area emitters. However, with IBL, integrators need to be modified so that when a ray has no intersection with the scene, the ray will eventually hit the IBL sphere and the corresponding emitted radiance from IBL should be returned. Code snippet like below is added to integrators. IBL double counting needs to be avoided whenever needed.
+    ~~~ cpp
+    if (!scene->rayIntersect(ray, its)) {
+        for (Emitter *em : scene->getEmitters())
+            if (em->isInfinite()) 
+                li += throughput * em->le(ray);
+    }
+    ~~~
+
+
+Comparison with Mitsuba
+----------------------------------
+To validate the correctness of my implementation, I rendered the same scenes using my renderer and Mitsuba. There is no visible difference between them. The `xml` files can be found under the path `scenes/final-report/ibl`. The `exr` files can be found under `result/project/img/IBL`
+
+- IBL-1
+    - A simple scene. A mirror sphere surrounded by an IBL
+        <div class="twentytwenty-container">
+            <img src="img/IBL/ibl-1-mitsuba.png" alt="Reference">
+            <img src="img/IBL/ibl-1-nori.png" alt="Mine">
+        </div>
+
+
+- IBL-2
+    - A simple scene. A dielectric sphere surrounded by another IBL
+        <div class="twentytwenty-container">
+            <img src="img/IBL/ibl-2-mitsuba.png" alt="Reference">
+            <img src="img/IBL/ibl-2-nori.png" alt="Mine">
+        </div>
+
+
+- IBL-3
+    - A more complicated scene. A Cornell Box is placed inside an IBL with the floor, ceiling, and back wall removed.
+    - This scene shows how the IBL works with other emitters.
+    - This scene shows how the IBL works with integrators with path tracing. (rendered with my path_vol_mis)
+        <div class="twentytwenty-container">
+            <img src="img/IBL/ibl-3-mitsuba.png" alt="Reference">
+            <img src="img/IBL/ibl-3-nori.png" alt="Mine">
+        </div>
+        
+
+
+
+
+
+
+Texture (5 pts)
+========================================
+
+Design
+--------
+
+- Texture mapping can be applied to meshed to replace the original BSDF parameters and add a lot of realism.
+- To add texture mapping to a mesh, the corresponding `.obj` file needs to contain the per vertex texture coordinates information.
+    - In particular, each vertex needs to have an texture coordinates $(u,v) \in[1,0]^2$
+    - This can be done using Blender's Smart UV function
+- Nori comes with the support for computing uv coordinates at the mesh intersection.
+    ~~~ cpp
+    /* Compute proper texture coordinates if provided by the mesh */
+    if (UV.size() > 0) {
+        its.uv = bary.x() * UV.col(idx0) +
+                 bary.y() * UV.col(idx1) +
+                 bary.z() * UV.col(idx2);
+    }
+    ~~~
+- With per vertex texture coordinates provided and the function to compute texture coordinates at intersection point, the only thing to do is to query the albedo value given an UV coordinates, and replace the original BSDF parameters. To do this, I implemented an abstract class `NoriTexture` as the base class for all kind of textures (albedo, normal, roughness, etc.) In this report, only the albedo texture is discussed.
+
+    - Abstract class `NoriTexture` has the following interfaces
+        ~~~ cpp
+            virtual Vector3f queryUV(const Point2f &uv) const = 0;
+            virtual bool isNormalTexture() { return false; }
+            virtual bool isColorTexture() { return false; }
+            virtual bool isRoughnessTexture() { return false; }
+            virtual bool isEmitterTexture() { return false; }
+        ~~~
+
+    - Texture is attached to a mesh in the following way
+        ~~~ xml
+        <mesh type="obj">
+            <string name="filename" value="meshes/floor.obj"> </string>
+            <bsdf type="diffuse">
+            </bsdf>
+            <texture type="color_texture">
+                <string name="texture_path" value="../texture-1.exr"> </string>
+            </texture>
+        </mesh>
+        ~~~
+- When an intersection is found, it will additionally check if the mesh has an attached color texture (albedo texture). If it does, the texture is queried for the $u,v$ coordinates of the intersection point, and the query result is stored in the `Intersection` struct.
+        - accel.cpp
+            ~~~ cpp
+            if (its.mesh->getColorTexture() != nullptr) {
+                Vector3f c = its.mesh->getColorTexture()->queryUV(its.uv);
+                its.color_texture = Color3f(c.x(), c.y(), c.z());
+                its.has_color_texture = true;
+            }
+            ~~~
+        - queryUV() accept the `uv` coordinates over the texture image and convert them into a point over a grid of the size $cols \times rows$. Then it uses bilinear interpolation to compute the albedo value at this point. Note that in my implementation, discrete radiance values are defined at the center of each grid cell, i.e. (0.5, 0.5), (1.5, 0.5) ... Implementation details can be found in `color_texture.cpp`.
+
+- Since the texture information is stored in the `Intersection` struct, the replacement of BSDF value is done by adding a `setTexture()` function to `Intersection` struct, which accepts a `BSDFQueryRecord` and transfer these texture information to the BSDFQueryRecord. This means `setTexture()` need to be called before calling `bRec.eval()` and `bRec.sample()` in the implementation of integrators.
+        ~~~ cpp
+        void setTexture(BSDFQueryRecord &brec) const {
+            if (has_color_texture) {
+                brec.color_texture = color_texture;
+                brec.has_color_texture = true;
+            } else {
+                brec.has_color_texture = false;
+                brec.color_texture = 0.f;
+            }
+            ...
+        }
+        ~~~
+
+- Take `Diffuse` for example, when `eval(const BSDFQueryRecord)` and `sample(BSDFQueryRecord, const Point2f)` are called, they check if the given BSDFQueryRecord contains texture information. If it does, original BSDF parameters are replaced with the texture information contained in the BSDFQueryRecord.
+    ~~~ cpp
+    Color3f eval(const BSDFQueryRecord &bRec) const {
+        ...
+        if (bRec.has_color_texture)
+            return bRec.color_texture * INV_PI;
+        else
+            return m_albedo * INV_PI;
+    }
+    ~~~
+
+    ~~~ cpp
+    Color3f sample(BSDFQueryRecord &bRec, const Point2f &sample) const {
+        ...
+        if (bRec.has_color_texture)
+            return bRec.color_texture;
+        else
+            return m_albedo;
+    }
+    ~~~
+
+
+
+
+Comparison with Mitsuba
+----------------------------------
+To validate the correctness of my implementation, I rendered the same scenes using my renderer and Mitsuba. There is no visible difference between them. The `xml` files can be found under the path `scenes/final_report/texture-cbox`. The `exr` files can be found under `result/project/img/texture`.
+
+- CBox with texture 1
+    <div class="twentytwenty-container">
+        <img src="img/texture/texture-mitsuba-1.png" alt="Reference">
+        <img src="img/texture/texture-nori-1.png" alt="Mine">
+    </div>
+
+
+- CBox with texture 2
+    <div class="twentytwenty-container">
+        <img src="img/texture/texture-mitsuba-2.png" alt="Reference">
+        <img src="img/texture/texture-nori-2.png" alt="Mine">
+    </div>
+
+- CBox with texture 3
+    <div class="twentytwenty-container">
+        <img src="img/texture/texture-mitsuba-3.png" alt="Reference">
+        <img src="img/texture/texture-nori-3.png" alt="Mine">
+    </div>
+
+
+- CBox with two kinds of textures and mirror and dielectric spheres
+    <div class="twentytwenty-container">
+        <img src="img/texture/texture-mitsuba-4.png" alt="Reference">
+        <img src="img/texture/texture-nori-4.png" alt="Mine">
+    </div>
+
+
+
+
+Heterogeneous Volumetric Participating Medium (60 pts)
+======================================================
+- To implement heterogeneous volumetric participating medium, I first created a new abstract class `Medium` in `medium.h` which is the base class for `HomogeneousMedium` and `HeterogeneousMedium`. Some helper functions and classes are also implemented in `medium.h`. 
+
+- Homogeneous medium and heterogeneous medium are implemented in `homogeneous.cpp` and `heterogeneous.cpp`
+    - Since my proposed feature is heterogeneous medium, only the design of heterogeneous medium is discussed in this report. I will show the results of homogeneous medium in the comparison section.
+
+- Integrators that can handle volumetric participating medium are implemented in `path_vol_mats.cpp` and `path_vol_mis.cpp`
+
+- My design and implementation make reference to PBRT's counterparts, which include `homogeneous.cpp`, `grid.cpp`, `medium.h` and `volpath.cpp`.
+
+Medium
+-------
+Several necessary classes and functions are implemented in `medium.h`.
+
+### Medium
+Medium is the base class for homogeneous and heterogeneous class which has the following interfaces
+
+- `virtual Color3f sample(const Ray3f &ray, Sampler *sampler, MediumInteraction *mi)`
+    - Given a ray with a medium attached, this function samples a medium scattering interaction along the ray.
+    - Integrators that handles medium need to ensure ray-scene intersection is called before this function and the intersection information is recorded in `ray.maxT`.
+    - With the above assumption, implementations of this method will only sample an medium intersection within ray.maxT. 
+
+
+- `virtual Color3f transmittance(const Ray3f &ray, Sampler *sampler)`
+    - Given a ray compute the beam transmittance along a given ray. In particular, the transmittance between `ray.o` and `ray.o + ray.d * ray.maxT`
+
+
+- `virtual float sample_pf(const Vector3f &wi, Vector3f &wo, Sampler *sampler)`
+    - Given an incident direction, sample the phase function to get a exiting direction.
+
+- `virtual float eval_pf(const Vector3f &wi, const Vector3f &wo)`
+    - Evaluate phase function value for a given pair of $w_i$ and $w_o$.
+
+###  MediumInterface
+    - MediumInterface saves an inside Medium and an outside Medium.
+    - My MediumInterface takes ideas from PBRT's counterpart. This structure is attached to a MediumInteraction introduced below and `mesh` objects who are used as the boundaries of medium. When a ray intersect such mesh, MediumInterface is used to determine the medium attached to the scattered new ray.
+    ~~~ cpp
+    struct MediumInterface {
+        const Medium *inside = nullptr, *outside = nullptr;
+        MediumInterface() = default;
+        explicit MediumInterface(const Medium *medium) : inside(medium), outside(medium) {}
+        MediumInterface(const Medium *inside, const Medium *outside)
+                : inside(inside), outside(outside) {}
+        bool IsMediumTransition() const { return inside != outside; }
+    };
+    ~~~
+
+
+###  MediumInteraction
+    - MediumInteraction is an extension of the Nori Intersection struct.
+    - The main difference is MediumInteraction also stores an instance of MediumInterface to determine the medium change when spawning a new ray.
+    ~~~ cpp
+    struct MediumInteraction {
+        Point3f p;
+        Normal3f n;
+        Vector3f wi;
+        MediumInterface mif;
+        bool initialized = false;
+        MediumInteraction() = default;;
+        MediumInteraction(Point3f p, Vector3f wi, const Medium *m) :
+                p(std::move(p)), wi(std::move(wi)), mif(m, m), initialized(true) {}
+        bool isInitialized() const { return initialized; }
+        void spawnRayToDir(Ray3f &ray, const Vector3f &d) const;
+        void spawnRayToPoint(Ray3f &ray, const Point3f &p1) const;
+    };
+    ~~~
+
+### VDB
+    - class `VDB` is used to read and query OpenVDB files for heterogeneous medium.
+    - `void reset(std::string &fp)`
+        - Given a path to the OpenVDB file, reset (initialize) the VDB object.
+        - Compute the maximum density and the bounding box of the VDB.
+    - `float get_inv_max_density() const`
+        - Return the maximum density of the VDB.
+    - `BoundingBox3f get_bbox() const`
+        - Return the bounding box of the VDB in its local coordinates.
+    - `float queryDensity(const Point3f &p) const` 
+        - Query the density using the VDB grid for a given point. This is done by calling `openvdb::tools::BoxSampler::sample()`.
+        - The given point need to be transformed into medium local coordinates.
+
+### Declare Medium in the `xml` file
+    - Medium is declared as a child element of a Mesh, which is used as medium boundary
+    - A Mesh can have two child Media. The first one is the interior medium, and the second is the exterior medium.
+    - Heterogeneous medium needs a transform `MediumToWorld` to place the medium in the world coordinates in the desired way.
+    - One thing to note is that when the volumetric data is scaled in size, the density also needs to be scaled accordingly in order to have the same visual effect, since the OpenVDB volumetric data is not resampled after geometric transformation. For example, if the volumetric data is expanded by 2 in all the three dimension, the density scale should be scaled by 0.5 to have the same look.
+    - An example is as below
+        ~~~ xml
+        <mesh type="obj">
+            <string name="filename" value="meshes/medium_boundary.obj"/>
+
+            <medium type="heterogeneous">
+                <transform name="MediumToWorld">
+                    <matrix value="1.0,0.0,0.0,0.0,0.0,1.0,1.1924880638503055e-08,0.0,0.0,-1.1924880638503055e-08,1.0,0.0,0.0,0.0,0.0,1.0"/>
+                </transform>
+                <color name="sigma_a" value="1 1 1"> </color>
+                <color name="sigma_s" value="1 1 1"> </color>
+                <float name="density_a" value="1"> </float>
+                <float name="density_s" value="0"> </float>
+                <float name="g" value="0"> </float>
+                <string name="vdb_path" value="../medium.vdb"> </string>
+            </medium>
+
+            <medium type="homogeneous">
+                <color name="sigma_a" value="1 1 1"> </color>
+                <color name="sigma_s" value="1 1 1"> </color>
+                <float name="density_a" value="1"> </float>
+                <float name="density_s" value="0"> </float>
+                <float name="g" value="0"> </float>
+            </medium>
+        </mesh>
+        ~~~
+
+
+Heterogeneous Volumetric Participating Medium
+-------
+`Heterogeneous` is a child class of `Medium` and implements all the previously mentioned interfaces. All codes of this class can be found in `src/heterogeneous.cpp`
+
+- `virtual Color3f sample(const Ray3f &ray, Sampler *sampler, MediumInteraction *mi)`
+    - Each heterogeneous medium has a corresponding `WorldToMedium` transform matrix in the scene.xml file.
+    - Given a ray in the world coordinates, this ray is first transformed into medium's local coordinates using the provided `WorldToMedium` transform matrix.
+    - Once the ray is transformed into medium's local coordinates, compute the intersection of the ray with the medium bounding box to further constrain the range of $[tMin, tMax]$ for efficiency
+    - Starting from ray parameter $t = tMin$, repeatedly compute a progress $dt$ following the delta tracking
+        - progress step $dt$ is computed by assuming the space is filled with a homogeneous medium with a sigmaT being the maximum sigmaT of the actual heterogeneous medium
+        - Terminate if $t > tMax$. In this case, no medium interaction is sampled.
+        - Otherwise, terminate at current step $t$ with the probability equal to $sigmaT(t) / maxSigmaT$. If terminate, a MediumInteraction is initialized at current position.
+
+
+- `virtual Color3f transmittance(const Ray3f &ray, Sampler *sampler)`
+    - Similar to the above sampling method, the ray from the world coordinates is first transformed into the medium's local coordinates and compute the bounding box intersection
+    - Conduct delta tracking using the above mentioned steps with two important differences
+        - Accumulate the transmittance value at each step
+        - Delta track is changed to ratio tracking by integrating a termination mechanism similar to the Russian roulette
+        
+
+- `virtual float sample_pf(const Vector3f &wi, Vector3f &wo, Sampler *sampler)`
+    - I choose Henyey-Greenstein to be the phase function used for heterogeneous medium.
+    - The sampling mechanism is implemented following the description on the PBRT pp.899.
+
+
+- `virtual float eval_pf(const Vector3f &wi, const Vector3f &wo)`
+    - Evaluate Henyey-Greenstein phase function value for a given pair of $w_i$ and $w_o$.
+    - The calculation of the phase function value follows the description on the PBRT pp.681.
+
+
+Integrator
+-------
+I implemented two kinds of integrators that can handle volumetric participating medium. One with naive material sampling and one with multiple importance sampling.
+
+### path_vol_mats Brute force path tracer
+- This integrator is generally similar to the previously implemented path_mats integrator. This integrator solve the transfer equation by hitting light sources instead of explicitly sampling emitters. Extra complexity is introduced when the ray has an attached medium.
+- When a ray hits a mesh which is used as the medium boundary, the ray may be tagged with the medium depending on whether it enters the medium.
+- When a ray has an attached medium, the integrator will sample a medium interaction using the method provided by the medium after computing the ray-scene intersection. The path throughput will be updated accordingly.
+    ~~~ cpp
+    bool intersectSurface = scene->rayIntersect(ray, its);
+    if (intersectSurface)
+        ray.maxt = (its.p - ray.o).norm();
+
+    /* If ray has an attached medium. Sample the medium. */
+    MediumInteraction mi;
+    if (ray.m != nullptr)
+        throughput *= ray.m->sample(ray, sampler, &mi);
+    ~~~
+- If a medium interaction is successfully sampled, a new scattered ray is sampled from the phase function.
+    ~~~ cpp
+    if (mi.isInitialized()) {
+        if (depth > MAX_DEPTH) break;
+        Vector3f wo;
+        mi.mif.inside->sample_pf(-ray.d, wo, sampler);
+        mi.spawnRayToDir(ray, wo);
+    }
+    ~~~
+- If the medium fails to sample a medium interaction, i.e. sampled t > ray.tMax, the integrator falls back to an ordinary material sampling path tracer. It will accumulate emitted radiance if hitting light sources, and a new scattering direction is sampled from the mesh BSDF. 
+    - One thing to note is that meshes which are used as medium boundaries have a special kind of BSDF `NullDiffuse`. The integrator checks the BSDF of the intersected mesh and if it is a `NullDiffuse`, the ray keeps its previous direction as if the mesh is totally transparent.
+    ~~~ cpp
+    if (its.mesh->getBSDF()->isNull()) {
+        its.spawnRayToDir(ray, ray.d);
+        depth--;
+        continue;
+    }
+    ~~~
+
+
+### path_vol_mis with Multiple Importance Sampling
+- The general idea of this integrator is similar to the `path_mis` of assignment 5. 
+- Two key differences introduced by media are
+    - Need to consider the transmittance along the shadow ray when estimating the emitted radiance from an emitter
+    - Need to calculate the direct illumination at a medium interaction point
+
+- To compute the transmittance along the shadow ray, I implemented a new method `Color3f Scene::Tr(const Ray3f &_ray, Sampler *sampler) const`
+    - `Tr()` computes the transmittance between `ray.o` and `ray.o + ray.d * ray.maxT`
+    - `Tr()` ignores meshes that are used as medium boundaries
+    - `Tr()` returns value 0 when hitting meshes that are not medium boundaries
+
+- To calculate the direct illumination at a medium interaction point
+    - First sample an emitter from the scene
+    - Compute the emitted radiance from this emitter and corresponding sampling pdf
+    - Compute the pdf with which the phase function would have sampled the same direction
+    - Weight the contribution of the light source sample using the same balance heuristic as assignment 5
+    - Sample a direction from phase function and check if it hits an emitter. If it does, calculate the probability with which light source sampling would have sampled this point and weighted the contribution in the similar way as before.
+        - To check if the direction hits an emitter, I implemented a new method `bool Scene::rayIntersectTr(const Ray3f &_ray, Sampler *sampler, Intersection &its, Color3f &Tr) const` which will ignore intersections at medium boundaries and will accumulate the transmittance along the way
+
+
+Validation
+----------------------------------
+
+### Validation of path tracers that handle mediums with Mitsuba
+- I first validate my implementation of path tracers against Mitsuba. I used homogeneous medium here to exclude the influence of my implementation of heterogeneous medium and test path tracers alone. 
+- I rendered the same scene using my path tracers and Mitsuba. There is no visible difference between them. The `scene.xml` files can be found under the path `scenes/final_report/homo-cbox`. The `exr` files shown below can be found under `result/project/img/medium`
+- It can be observed that the efficiency of using multiple importance sampling is remarkable.
+
+- Simple scene rendered with my path_vol_mats (256spp) vs. Mitsuba (64spp)
+    <div class="twentytwenty-container">
+        <img src="img/medium/homo-mitsuba.png" alt="Reference">
+        <img src="img/medium/homo-nori-mats.png" alt="Mine">
+    </div>
+
+- Simple scene rendered with my path_vol_mis (64spp) vs. Mitsuba (64spp)
+    <div class="twentytwenty-container">
+        <img src="img/medium/homo-mitsuba.png" alt="Reference">
+        <img src="img/medium/homo-nori-mis.png" alt="Mine">
+    </div>
+
+- Complex scene rendered with my path_vol_mis (256spp) vs. Mitsuba (256spp). This scene shows how medium works with others meshes. In this scene, part of solid spheres overlap with the medium. 
+    <div class="twentytwenty-container">
+        <img src="img/medium/homo-mitsuba-2.png" alt="Reference">
+        <img src="img/medium/homo-nori-2.png" alt="Mine">
+    </div>
+
+- Complex scene rendered with my path_vol_mis (256spp) vs. Mitsuba (256spp). This scene shows how multiple media work together. In this scene, one medium cube lies between two medium spheres and the light source. This test case validates the correctness of the estimation of direct illumination when there are multiple media in the scene.
+    <div class="twentytwenty-container">
+        <img src="img/medium/homo-mitsuba-3.png" alt="Reference">
+        <img src="img/medium/homo-nori-3.png" alt="Mine">
+    </div>
+
+### Validation of heterogeneous medium with Blender
+- I found it difficult to place multiple `.vol` files in the scene and transform them in my desired way in Mitsuba, which would limit my choice of validation. Therefore, I validated my implementation of heterogeneous medium with Blender. 
+- I created the same CBox scene in Blender with the same parameters to test my implementation.
+    - Although I set all the parameters in the same way as I did in the Nori scene, there were still very slight differences between them.  The main visible difference is that the light on the roof kind of spills out on the two sides. 
+    - The render engine used in Blender is *Cycles*, the max bounces for all kind of events are all 16. 
+    - The naive CBox scene rendered with Blender and Nori are shown below. 
+        <div class="twentytwenty-container">
+            <img src="img/medium/hetero-blender-0.png" alt="Reference">
+            <img src="img/medium/hetero-nori-0.png" alt="Mine">
+        </div>
+
+- All the validation scenes can be found under `scenes/final_report/hetero_blender`. Images rendered by Blender can be reproduced by opening the `.blend` file and run *Render Image* . Images rendered by Nori can be reproduced by rendering the corresponding `.xml` scenes.
+
+- Scene - 1
+    - CBox scene with an vortex.
+    - Vortex parameter: albedo = 0, density_scale = 0.5
+    - There is always a slight position displacement for OpenVDB volumes between Nori and Blender for unknown reasons. Other than that, there is no visible difference between there two images.
+        <div class="twentytwenty-container">
+            <img src="img/medium/hetero-blender-1.png" alt="Reference">
+            <img src="img/medium/hetero-nori-1.png" alt="Mine">
+        </div>
+
+- Scene - 2
+    - CBox scene with an vortex.
+    - This scene shows the effect of the albedo parameter ($\rho=\frac{\sigma_s}{\sigma_t}$).
+    - Vortex parameter: albedo = 0.5, density_scale = 0.5
+        <div class="twentytwenty-container">
+            <img src="img/medium/hetero-blender-4-s1.png" alt="Reference">
+            <img src="img/medium/hetero-nori-4.png" alt="Mine">
+        </div>
+
+    - It is worth mentioning that, in Blender, there is a parameter `step_size` which controls distance between volume samples and has visible impact on the rendered image. Below is the comparison between image rendered in Blender with `step_size` set to 0.8 and 1.2. It is difficult to choose the perfect step_size for each volumetric data to make it match the image rendered with Nori, so I simply set `step_size` to 1 in Blender. This fixed `step_size` may cause some slight differences between the image rendered with Nori and with Blender. However, it should be sufficient to be used as a reference in validation.
+        <div class="twentytwenty-container">
+            <img src="img/medium/hetero-blender-4-s0.8.png" alt="Reference">
+            <img src="img/medium/hetero-blender-4-s1.2.png" alt="Mine">
+        </div> 
+
+- Scene - 3
+    - CBox scene with an vortex and spheres.
+    - This scene shows how the heterogeneous medium works with other meshes. Part of the right sphere is immersed in the medium.
+    - Vortex parameter: albedo = 0, density_scale = 0.5
+        <div class="twentytwenty-container">
+            <img src="img/medium/hetero-blender-2.png" alt="Reference">
+            <img src="img/medium/hetero-nori-2.png" alt="Mine">
+        </div>
+
+- Scene - 4
+    - CBox scene with multiple heterogeneous media.
+    - This scene shows how multiple media works together. Direct illumination estimation and path tracer with MIS work correctly when there are multiple media in the scene.
+    - All media have albedo 0.
+        <div class="twentytwenty-container">
+            <img src="img/medium/hetero-blender-3.png" alt="Reference">
+            <img src="img/medium/hetero-nori-3.png" alt="Mine">
+        </div>
+
+- Scene - 5
+    - CBox scene with multiple heterogeneous media with different medium parameters.
+    - This scene shows how medium parameters change the visual effect.
+    - It is unknown what phase function is used in Blender, so that the effect of anisotropy may be slight different.
+    - TopLeft: albedo = 0.2, anisotropy = -0.5, density_scale = 1
+    - TopRight: albedo = 0.5, anisotropy = 0, density_scale = 1
+    - BottomLeft: albedo = 0.5, anisotropy = 0.1, density_scale = 0.5
+        <div class="twentytwenty-container">
+            <img src="img/medium/hetero-blender-5.png" alt="Reference">
+            <img src="img/medium/hetero-nori-5.png" alt="Mine">
+        </div>
+
+Feedback
+========
+
+I enjoy this course very much! Professor Jacob gives very good lectures. The assignments and final project were well organized with clear instructions, predictable outcomes, and prompt feedbacks. I would highly recommend this course to my friends. Another personal feedback is that maybe it would be helpful to have more instructions on the assignment and final project report. Sometimes I was confused about how detailed my report should be and didn't know whether my design discussion should be more specific or more general.
+
+
+<!-- Slider -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="../resources/jquery.event.move.js"></script>
+<script src="../resources/jquery.twentytwenty.js"></script>
+<link href="../resources/offcanvas.css" rel="stylesheet">
+<link href="../resources/twentytwenty.css" rel="stylesheet" type="text/css" />
+<script>var markdeepOptions = {onLoad: function() {$(".twentytwenty-container").twentytwenty({default_offset_pct: 0.5, move_slider_on_hover: true});}, inlineCodeLang: 'cpp'};</script>
+<!-- Markdeep: -->
+<script src="https://morgan3d.github.io/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
+<script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

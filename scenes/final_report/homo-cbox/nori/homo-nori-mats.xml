@@ -1,0 +1,91 @@
+<?xml version="1.0" ?>
+<scene>
+    <integrator type="path_vol_mats"/>
+<!--    <integrator type="path_vol_mat"/>-->
+    <sampler type="independent">
+        <integer name="sampleCount" value="256"/>
+    </sampler>
+    <camera type="perspective">
+        <float name="fov" value="39.59775192067671"/>
+        <float name="nearClip" value="0.10000000149011612"/>
+        <float name="farClip" value="100.0"/>
+<!--                <integer name="width" value="450"/>-->
+<!--                <integer name="height" value="300"/>-->
+        <integer name="width" value="600"/>
+        <integer name="height" value="400"/>
+        <transform name="toWorld">
+            <matrix value="-1.0,0.0,0.0,0.0,0.0,1.0,4.371138828673793e-08,0.7599999904632568,0.0,4.371138828673793e-08,-1.0,4.056399822235107,0.0,0.0,0.0,1.0"/>
+        </transform>
+    </camera>
+
+    <mesh type="obj">
+        <string name="filename" value="meshes/light.obj"/>
+        <bsdf type="diffuse"/>
+        <emitter type="area">
+            <color name="radiance" value="40 40 40"/>
+        </emitter>
+    </mesh>
+
+    <mesh type="obj">
+        <string name="filename" value="meshes/leftWall.obj"/>
+        <bsdf type="diffuse">
+            <color name="albedo" value="0.630 0.065 0.05"/>
+        </bsdf>
+    </mesh>
+
+    <mesh type="obj">
+        <string name="filename" value="meshes/rightWall.obj"/>
+        <bsdf type="diffuse">
+            <color name="albedo" value="0.161 0.133 0.427"/>
+        </bsdf>
+    </mesh>
+
+    <mesh type="obj">
+        <string name="filename" value="meshes/leftSphere.obj"/>
+<!--        <bsdf type="diffuse">-->
+<!--            <color name="albedo" value="0.75,0.75,0.75"/>-->
+<!--        </bsdf>-->
+        <medium type="homogeneous">
+            <color name="sigma_a" value="1 1 1"/>
+            <color name="sigma_s" value="4 4 4"/>
+            <float name="density_a" value="1"/>
+            <float name="density_s" value="1"/>
+            <float name="g" value="0.2"/>
+        </medium>
+    </mesh>
+
+    <mesh type="obj">
+        <string name="filename" value="meshes/rightSphere.obj"/>
+<!--        <bsdf type="diffuse">-->
+<!--            <color name="albedo" value="0.75,0.75,0.75"/>-->
+<!--        </bsdf>-->
+        <medium type="homogeneous">
+            <color name="sigma_a" value="4 4 4"/>
+            <color name="sigma_s" value="1 1 1"/>
+            <float name="density_a" value="1"/>
+            <float name="density_s" value="1"/>
+            <float name="g" value="0.2"/>
+        </medium>
+    </mesh>
+
+    <mesh type="obj">
+        <string name="filename" value="meshes/ceiling.obj"/>
+        <bsdf type="diffuse">
+            <color name="albedo" value="0.725 0.71 0.68"/>
+        </bsdf>
+    </mesh>
+    <mesh type="obj">
+        <string name="filename" value="meshes/floor.obj"/>
+        <bsdf type="diffuse">
+            <color name="albedo" value="0.725 0.71 0.68"/>
+        </bsdf>
+    </mesh>
+
+    <mesh type="obj">
+        <string name="filename" value="meshes/backWall.obj"/>
+        <bsdf type="diffuse">
+            <color name="albedo" value="0.725 0.71 0.68"/>
+        </bsdf>
+    </mesh>
+
+</scene>

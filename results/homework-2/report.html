@@ -1,0 +1,145 @@
+**Homework 2**
+
+Student name: Qiyuan Dong
+
+Sciper number: 307612
+
+Octree construction (50 pts)
+============================
+**1. What information do you store per octree node?**<br>
+    Octree node is defined as a cpp struct, and it has three membership variables:
+
+        - `BoundingBox3f bbox`: the bounding box of the space that this octree node covers
+        - `OctreeNode *children[8]`: the eight children of this octree node (for a leaf node, it is an array of eight NULL)
+        - `TriangleList *triList`: the indexes of triangles that this leaf octree node covers (`typedef std::vector<uint32_t> TriangleList`). Please note that all interior nodes have triList being Null.
+**2. How many bytes of memory does one of your octree nodes occupy?**<br>
+    I monitored the memory usage of the nori process at the point when the actual rendering just started by appending a infinite loop at the end of build().
+
+        * When `build()` is an empty function, i.e. no octree is built, the memory usage of the entire nori process is 24.1MB.
+        * After implementing the octree construction, the memory usage of the entire nori process is 110.7MB.
+        * If we assume all the extra memory usage is due to the implementation of the octree, my octree occupies 86.6MB of memory.
+    I also explicitly calculated the memory usage by using the `sizeof` function
+
+        - The total size of the octree is 84.85MB, 127.56 bytes per node on average
+        - The result is similar to the one given by system monitor.
+
+**3. Statistics for the Ajax scene:**<br>
+    The statistics are collected under the following conditions:
+        - No TBB, No sorted traversal
+        - Leaf node threshold = 10
+        - max depth = 8
+        - early stop = 3
+        - image = 768*768, spp = 32
+    Construction time: 516.0ms
+    Number of interior nodes: 83157
+    Number of leaf nodes: 582100
+    Average number of triangles per leaf node: 4.9302
+
+**4. Design details**<br>
+
+    - within `build()`, another function `buildSubtree()` is called to recursively build the entire octree, which returns the pointer to the root node
+    - There are three termination conditions for recursive tree building:
+        - there are not more than 10 triangles within current node
+        - the number of triangles between the parent node and child node is not reduced for too many times, trigger the early stop condition
+        - the depth has reached the max_depth limit
+
+
+Ray traversal (25 pts)
+======================
+**1. How long did it take to render the scene on your machine?**<br>
+    8.3 second.
+
+**2. How much of a speed-up did you achieve over what was there before?**<br>
+    To create a simplified rendering task, I reduced the resolution from 768*768 to 256*256, and reduced spp from 32 to 1 to accommodate the brute force method.
+
+        - Brute force method: 150s
+        - Octree acceleration: 83.0ms
+        - Then for the simplified rendering task, the speed-up is 1807x
+
+    We can extrapolate to obtain an estimate of the time required by the brute force algorithm for the original rendering task,
+
+        - Brute force method: 150 * 32 * 3 * 3 = 43200s
+        - Octree acceleration: 8.3s
+        - Then for the original rendering task, the speed-up is 5205x
+
+**3. Design details**<br>
+
+    - For function `rayIntersect()`, it can choose between using the brute force method or using octree acceleration
+    - When using octree acceleration, it invokes the function `rayIntersectOctree()` to find the nearest intersection using the octree
+    - As the children nodes are not sorted, need to traverse all the children even if an intersection is already found
+    - After finding the nearest intersection, the following procedures are the same as before
+
+
+Improved ray traversal (25 pts)
+===============================
+**1. Include the surface normal visualization of the Ajax bust rendered by both your basic and improved implementations. They should match perfectly.**<br>
+    Below is a comparison between the unsorted traversal and sorted traversal.
+<div class="twentytwenty-container">
+    <img src="ajax-normals-improved.png" alt="Improved">
+    <img src="ajax-normals.png" alt="Non-improved">
+</div>
+
+**2. How long did it take to render the scene on your machine with this improved version?**<br>
+    2.6s.
+
+**3. How much of a speedup is this relative to Part 2?**<br>
+    Compared with the implementation of part 2, the speed-up is 8.3 / 2.6 = 3.19x
+
+**4. Design details**<br>
+
+    - The sort method which keeps tracking the indexes takes reference to https://stackoverflow.com/questions/1577475/c-sorting-and-keeping-track-of-indexes
+    - Having sorted the children nodes, recursively check all children of an interior node from the closest to the furthest
+    - Traversal is terminated once an intersection is found, which is guaranteed to be the nearest one
+
+Surface normal visualization of the Ajax bust:
+<div class="twentytwenty-container">
+    <img src="ajax-normals-ref.png" alt="Reference">
+    <img src="ajax-normals.png" alt="Mine">
+</div>
+
+
+Hacker Points: Thread Building Blocks (TBB) Acceleration (25 pts)
+===============================
+- I find there are two places in the octree building that may applicable for TBB acceleration:
+    - when traversing all the triangles of the current node to designate each triangle to some children nodes
+    - when recursively building the octree for the eight children.
+    Intuitively, I think the second scenario is more suitable for TBB acceleration, as the gain of using TBB for triangle traversal may not compensate the additional overhead.
+
+- I implemented TBB in both positions, and tested the performance gain.
+    - for the first scenario, the construction time decreased from 516ms -> 513ms, almost no speedup
+    - for the second scenario, the construction time decreased from 516ms -> 127ms, 4.06x speedup
+
+Apparently, the second scenario is more suitable for TBB, which is consistent with what I expected.
+Thus, by default, I enable TBB for recursively tree building, and disable TBB for triangle traversal.
+Please also note that, to accommodate parallel tree building, the variables used to collect statistic data are replaced by their atomic or concurrent version.
+
+
+This is the end of my report. Thank you!
+================================================
+
+
+
+Note: Nori automatically generates both an `.exr` as well as an sRGB tonemapped `.png` image of your rendering that is
+directly used for the comparison above. Please still commit both versions in your `results/homework-X` folder.
+
+Feedback
+========
+
+We would appreciate any comments or criticism to improve the projects in future years--naturally, this part will not be
+graded. Examples of information that is useful to us includes:
+
+* How much time did you spend on the assignment? How was it divided between designing, coding, and testing?
+* What advice should we have given you before you started?
+* What was hard or surprising about the assignment?
+* What did you like or dislike? What else would you change?
+
+<!-- Slider -->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="../resources/jquery.event.move.js"></script>
+<script src="../resources/jquery.twentytwenty.js"></script>
+<link href="../resources/offcanvas.css" rel="stylesheet">
+<link href="../resources/twentytwenty.css" rel="stylesheet" type="text/css" />
+<script>var markdeepOptions = {onLoad: function() {$(".twentytwenty-container").twentytwenty({default_offset_pct: 0.5, move_slider_on_hover: true});} };</script>
+<!-- Markdeep: -->
+<script src="https://morgan3d.github.io/markdeep/latest/markdeep.min.js?" charset="utf-8"></script>
+<script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

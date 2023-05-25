@@ -1,0 +1,87 @@
+<?xml version="1.0" ?>
+<scene>
+    <integrator type="path_vol_mis"/>
+<!--    <integrator type="path_ems"/>-->
+<!--    <integrator type="path_mats"/>-->
+<!--    <integrator type="whitted"/>-->
+    <sampler type="independent">
+        <integer name="sampleCount" value="1024"/>
+    </sampler>
+    <camera type="perspective">
+        <float name="fov" value="39.59775192067671"/>
+        <float name="nearClip" value="0.10000000149011612"/>
+        <float name="farClip" value="100.0"/>
+        <integer name="width" value="600"/>
+        <integer name="height" value="400"/>
+        <transform name="toWorld">
+            <matrix value="-1.0,0.0,0.0,0.0,0.0,0.9719610214233398,-0.23514194786548615,2.940000057220459,0.0,-0.23514194786548615,-0.9719610214233398,8.016399383544922,0.0,0.0,0.0,1.0"/>
+        </transform>
+    </camera>
+
+
+        <mesh type="obj">
+            <string name="filename" value="meshes/light.obj"/>
+            <bsdf type="mirror"/>
+                    <emitter type="area">
+                        <color name="radiance" value="40 40 40"/>
+                    </emitter>
+        </mesh>
+
+        <mesh type="obj">
+            <string name="filename" value="meshes/leftWall.obj"/>
+            <bsdf type="diffuse">
+                <color name="albedo" value="0.630 0.065 0.05"/>
+            </bsdf>
+        </mesh>
+
+        <mesh type="obj">
+            <string name="filename" value="meshes/rightWall.obj"/>
+            <bsdf type="diffuse">
+                <color name="albedo" value="0.161 0.133 0.427"/>
+            </bsdf>
+        </mesh>
+
+    <mesh type="obj">
+        <string name="filename" value="meshes/leftSphere.obj"/>
+<!--        <bsdf type="mirror">-->
+        <bsdf type="diffuse">
+            <color name="albedo" value="0.75,0.75,0.75"/>
+        </bsdf>
+    </mesh>
+
+    <mesh type="obj">
+        <string name="filename" value="meshes/rightSphere.obj"/>
+<!--        <bsdf type="mirror">-->
+        <bsdf type="diffuse">
+            <color name="albedo" value="0.75,0.75,0.75"/>
+        </bsdf>
+    </mesh>
+
+    <!--    <mesh type="obj">-->
+    <!--        <string name="filename" value="meshes/ceiling.obj"/>-->
+    <!--        <bsdf type="mirror">-->
+    <!--            <color name="albedo" value="0.725 0.71 0.68"/>-->
+    <!--        </bsdf>-->
+    <!--    </mesh>-->
+<!--        <mesh type="obj">-->
+<!--            <string name="filename" value="meshes/floor.obj"/>-->
+<!--            <bsdf type="mirror">-->
+<!--                <color name="albedo" value="0.725 0.71 0.68"/>-->
+<!--            </bsdf>-->
+<!--        </mesh>-->
+
+<!--        <mesh type="obj">-->
+<!--            <string name="filename" value="meshes/backWall.obj"/>-->
+<!--            <bsdf type="dielectric">-->
+<!--                <color name="albedo" value="0.725 0.71 0.68"/>-->
+<!--            </bsdf>-->
+<!--        </mesh>-->
+
+    <emitter type="IBL">
+        <string name="exr_path" value="../ibl.exr"/>
+        <float name="strength" value="1.0"/>
+        <transform name="toWorld">
+            <matrix value="1.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,-1.0,0.0,0.0,0.0,0.0,0.0,1.0"/>
+        </transform>
+    </emitter>
+</scene>

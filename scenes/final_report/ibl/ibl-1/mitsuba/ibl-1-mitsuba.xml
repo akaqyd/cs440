@@ -1,0 +1,46 @@
+<?xml version="1.0" ?>
+<scene version="0.5.0">
+	<integrator type="path"/>
+
+	<sensor type="perspective">
+		<sampler type="independent">
+			<integer name="sampleCount" value="32"/>
+		</sampler>
+
+		<float name="fov" value="76.56614055808697"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="100.0"/>
+		<integer name="width" value="960"/>
+		<integer name="height" value="540"/>
+		<transform name="toWorld">
+			<matrix value="4.371138828673793e-08,-4.371138828673793e-08,1.0,0.0,0.0,1.0,4.371138828673793e-08,0.0,-1.0,-1.910685676922942e-15,4.371138828673793e-08,0.0,0.0,0.0,0.0,1.0"/>
+		</transform>
+
+		<film type="hdrfilm">
+			<integer name="height" value="540"/>
+			<integer name="width" value="960"/>
+			<rfilter type="gaussian"/>
+		</film>
+
+	</sensor>
+
+	<shape type="obj">
+		<string name="filename" value="meshes/leftSphere.obj"/>
+		<bsdf type="conductor">
+			<string name="material" value="none"/>
+		</bsdf>
+	</shape>
+
+	<emitter type="envmap">
+		<string name="filename" value="../ibl-r.exr"/>
+		<transform name="toWorld">
+<!--			<rotate angle="-90" x="1" />-->
+			<rotate angle="-90" y="1" />
+<!--			<rotate angle="90" z="1" />-->
+		</transform>
+<!--		<transform name="toWorld">-->
+<!--			<matrix value="1.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,-1.0,0.0,0.0,0.0,0.0,0.0,1.0"/>-->
+<!--		</transform>-->
+	</emitter>
+
+</scene>

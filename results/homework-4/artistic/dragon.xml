@@ -1,0 +1,73 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="whitted"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="512"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="40.73854719132516"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="100.0"/>
+		<!-- <integer name="width" value="1920"/>
+		<integer name="height" value="1080"/> -->
+		<integer name="width" value="960"/>
+		<integer name="height" value="540"/>
+
+		<transform name="toWorld">
+			<matrix value="0.2847222685813904,-0.11804241687059402,-0.9513144493103027,14.640190124511719,-0.025652112439274788,0.9910958409309387,-0.1306561380624771,5.769163131713867,0.9582667946815491,0.06160394102334976,0.2791590094566345,-3.661409854888916,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</camera>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Dragon 2.5_stl.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.03,0.3,0.01"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/colosseum.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.6,0.5,0.1"/>
+		</bsdf>
+	</mesh>
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/Dragon 2.5_stl.001.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.75,0.75,0.75"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Plane.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.1,0.1,0.1"/>
+		</bsdf>
+	</mesh>
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/Moon_Cube.001.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.75,0.75,0.75"/>
+		</bsdf>
+		<emitter type="area">
+            <color name="radiance" value="160, 160, 160"/>
+        </emitter>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Moon_Cube.002.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.75,0.75,0.75"/>
+		</bsdf>
+		<emitter type="area">
+            <color name="radiance" value="230, 70, 50"/>
+        </emitter>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Moon_Cube.003.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.75,0.75,0.75"/>
+		</bsdf>
+		<emitter type="area">
+            <color name="radiance" value="300, 280, 200"/>
+        </emitter>
+	</mesh>
+</scene>

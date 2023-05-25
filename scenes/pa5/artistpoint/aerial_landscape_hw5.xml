@@ -1,0 +1,94 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="path_vol"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="128"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="35.48934190849526"/>
+		<float name="nearClip" value="3.0"/>
+		<float name="farClip" value="100000.0"/>
+		<integer name="width" value="640"/>
+		<integer name="height" value="270"/>
+		<transform name="toWorld">
+			<matrix value="-0.05674797669053078,0.11233685910701752,0.9920482635498047,-5116.814453125,-0.005065847188234329,0.9936042428016663,-0.11280284821987152,472.318603515625,-0.998375415802002,-0.011426900513470173,-0.05581596493721008,-11.116754531860352,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</camera>
+	<mesh type="obj">
+		<string name="filename" value="meshes/logo.obj"/>
+		<bsdf type="dielectric"/>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/landscape.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.409 0.435 0.435"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/water_river.obj"/>
+<!--		<bsdf type="mirror"/>-->
+		<bsdf type="microfacet-hacker">
+			<float name="alpha" value="0.1"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/building.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.35,0.35,0.35"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/bridge.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.75,0.75,0.75"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/SCG_city.001.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.35,0.35,0.35"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/SCG_city.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.35,0.35,0.35"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/building.003.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.35,0.35,0.35"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/building.002.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.35,0.35,0.35"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/building.001.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.75,0.75,0.75"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/building.004.obj"/>
+		<bsdf type="diffuse">
+			<color name="albedo" value="0.75,0.75,0.75"/>
+		</bsdf>
+	</mesh>
+<!--	<emitter type="IBL">-->
+<!--		<string name="exr_path" value="sky-ibl.exr" />-->
+<!--		<float name="strength" value="1" />-->
+<!--	</emitter>-->
+
+
+	<emitter type="directional">
+		<color name="radiance" value="8 3 1.1"/>
+		<vector name="direction" value="-1, -0.2, -1"/>
+	</emitter>
+
+
+</scene>
